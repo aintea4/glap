@@ -1,11 +1,8 @@
 import gleeunit
 
-import gleam/option.{Some}
-
 import glap/arguments.{Command, Flag, UnnamedArgument}
 import glap/parser.{Parser, parse}
 import glap/cliargs.{then_get_subargument, get_content_opt, get_content_opt_or, get_cliarg}
-
 
 pub fn main() -> Nil {
   gleeunit.main()
@@ -58,18 +55,18 @@ pub fn parse_test() {
 
   // NOTE: let's assume `./glap -o=/path/to/file add task name_here description_here` was given
 
-  let assert Some(author) = get_cliarg(cliargs, "-n") |> get_content_opt
+  let assert Ok(author) = get_cliarg(cliargs, "-n") |> get_content_opt
   let output = get_cliarg(cliargs, "--output") |> get_content_opt_or("/path/to/default")
 
   // let assert Some(add_cliarg) = get_cliarg(cliargs, "add")
   // let assert Some(task_cliarg) = get_subargument(add_cliarg, "task")
 
-  let assert Some(task_name) = get_cliarg(cliargs, "add")
+  let assert Ok(task_name) = get_cliarg(cliargs, "add")
   |> then_get_subargument("task")
   |> then_get_subargument("name")
 	|> get_content_opt
 
-  let assert Some(task_description) = get_cliarg(cliargs, "add")
+  let assert Ok(task_description) = get_cliarg(cliargs, "add")
   |> then_get_subargument("task")
   |> then_get_subargument("description")
 	|> get_content_opt
