@@ -12,7 +12,7 @@ pub type CLIArgs = List(CLIArg)
 pub type CLIArg {
 	UnnamedArgument(name: String, content: String)
 	Flag(short: String, long: String, content: Option(String))
-	Command(name: String, registered: Bool, subcommands: CLIArgs)
+	Command(name: String, registered: Bool, subarguments: CLIArgs)
 }
 
 fn stringoption_to_string(o: Option(String)) -> String {
@@ -26,7 +26,7 @@ fn cliarg_to_string_aux(cliarg: CLIArg, indent_level: Int) -> String {
 	case cliarg {
 		UnnamedArgument(name, content) -> strformat("UnnamedArgument(\"{}\", \"{}\")", [name, content])
 		Flag(short, long, content) -> strformat("Flag(\"{}\", \"{}\", {})", [short, long, stringoption_to_string(content)])
-		Command(name, registered, subcommands) -> strformat("Command(\"{}\", {}){}", [name, bool.to_string(registered), cliargs_to_string_aux(subcommands, indent_level+1)])
+		Command(name, registered, subarguments) -> strformat("Command(\"{}\", {}){}", [name, bool.to_string(registered), cliargs_to_string_aux(subarguments, indent_level+1)])
 	}
 }
 
@@ -61,16 +61,24 @@ pub fn get_cliarg(cliargs: CLIArgs, cliarg_name: String) -> Option(CLIArg) {
 	}
 }
 
-pub fn get_content(cliargs: CLIArgs, cliarg_name: String) -> Option(String) {
-	case get_cliarg(cliargs, cliarg_name) {
+pub fn get_content(cliarg: CLIArg) -> Option(String) {
+	case cliarg {
+		Flag(_, _, content_o) -> content_o
+		UnnamedArgument(_, content) -> Some(content)
+		_ -> None
+	}
+}
+
+pub fn get_content_opt(cliarg: Option(CLIArg)) -> Option(String) {
+	case cliarg {
 		Some(Flag(_, _, content_o)) -> content_o
 		Some(UnnamedArgument(_, content)) -> Some(content)
 		_ -> None
 	}
 }
 
-pub fn get_content_or(cliargs: CLIArgs, cliarg_name: String, default: String) -> String {
-	get_content(cliargs, cliarg_name)
+pub fn get_content_opt_or(cliarg: Option(CLIArg), default: String) -> String {
+	get_content_opt(cliarg)
 	|> option.unwrap(default)
 }
 
@@ -80,14 +88,14 @@ pub fn is_argument_registered(cliargs: CLIArgs, cliarg_name: String) -> Bool {
 }
 
 
-pub fn get_subcommand(command: CLIArg, subcommand_name: String) -> Option(CLIArg) {
+pub fn get_subargument(command: CLIArg, subargument_name: String) -> Option(CLIArg) {
 	case command {
 		Command(_, _, subcommands) -> {
 			list.filter(subcommands, fn (cliarg) {
 				case cliarg {
-					Flag(short, long, _) if subcommand_name == short || subcommand_name == long -> True
-					Command(name, _, _) if subcommand_name == name -> True
-					UnnamedArgument(name, _) if subcommand_name == name -> True
+					Flag(short, long, _) if subargument_name == short || subargument_name == long -> True
+					Command(name, _, _) if subargument_name == name -> True
+					UnnamedArgument(name, _) if subargument_name == name -> True
 					_ -> False
 				}
 			})
@@ -95,5 +103,13 @@ pub fn get_subcommand(command: CLIArg, subcommand_name: String) -> Option(CLIArg
 			|> option.from_result
 		}
 		_ -> None
+	}
+}
+
+
+pub fn then_get_subargument(cliarg_o: Option(CLIArg), subargument_name: String) -> Option(CLIArg) {
+	case cliarg_o {
+		Some(cliarg) -> get_subargument(cliarg, subargument_name)
+		None -> None
 	}
 }
