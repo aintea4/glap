@@ -4,9 +4,9 @@ version = "1.0.0"
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
 #
-# description = ""
-# licences = ["Apache-2.0"]
-# repository = { type = "github", user = "", repo = "" }
+description = "a small clap-like library to parse CLI arguments"
+licences = ["MIT License"]
+repository = { type = "github", user = "aintea4", repo = "https://github.com/aintea4/glap" }
 # links = [{ title = "Website", href = "" }]
 #
 # For a full reference of all the available options, you can have a look at
