@@ -76,12 +76,12 @@ pub fn main() {
   let assert Ok(task_name) = get_cliarg(cliargs, "add")
   |> then_get_subargument("task")
   |> then_get_subargument("name")
-	|> get_content_opt
+  |> get_content_opt
 
   let assert Ok(task_description) = get_cliarg(cliargs, "add")
   |> then_get_subargument("task")
   |> then_get_subargument("description")
-	|> get_content_opt
+  |> get_content_opt
 
   io.print("Author: ")
   io.println(author)
