@@ -13,7 +13,7 @@ import gleeunit
 import glap/arguments.{Command, Flag, UnnamedArgument}
 import glap/parser.{Parser, parse}
 import glap/cliargs.{then_get_subargument, get_content_opt, get_content_opt_or, get_cliarg, get_command}
-import glap/parser_settings.{ParserSettings}
+import glap/parser_settings.{default_parser_settings}
 
 pub fn main() {
   let parser = [
@@ -53,7 +53,7 @@ pub fn main() {
     Command("list", "lists tasks", True, [
       Command("all", "lists all tasks, even the hidden ones", False, [])
     ])
-  ] |> Parser("simple todo list CLI app", _, ParserSettings(True))  // NOTE: here `True` means we enforce check of required arguments
+  ] |> Parser("simple todo list CLI app", _, default_parser_settings())
 
   // let cliargs = parse(parser, ["your", "cli", arguments", "here"])
   let assert Ok(cliargs) = parse(parser)
