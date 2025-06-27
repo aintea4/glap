@@ -135,8 +135,30 @@ fn parse_aux(
 
 		// NOTE: unless only commands are left in which case we take this command
 
-		[_h_command, .._rest_command], _, _ if required_flags != [] -> panic as "missing required flags"
-		[_h_command, .._rest_command], _, _ if unnamed_arguments != [] -> panic as "missing unnamed arguments"
+		[_h_command, .._rest_command], _, _ if required_flags != [] ->
+			strformat("missing required flags: ", [
+				list.map(required_flags, fn(cliarg) {
+					let assert arguments.Flag(short, long, _, _, _) = cliarg
+
+					"[" <> short <> "|" <> long <> "]"
+				})
+				|> string.join(", ")
+			])
+			|> error.MissingRequiredFlag
+			|> Error
+
+		[_h_command, .._rest_command], _, _ if unnamed_arguments != [] ->
+			// panic as "missing unnamed arguments"
+			strformat("missing required flags: ", [
+				list.map(unnamed_arguments, fn(cliarg) {
+					let assert arguments.UnnamedArgument(name, _) = cliarg
+
+					name
+				})
+				|> string.join(", ")
+			])
+			|> error.MissingRequiredFlag
+			|> Error
 
 		[arguments.Command(name, _description, _required, subs), ..rest_command], _, _ -> {
 			// NOTE: if current name not matching, try next command
@@ -156,7 +178,10 @@ fn parse_aux(
 			Ok([command_cliarg])
 		}
 
-		_, _, _ -> strformat("argument '{}' unknown", [h_args]) |> error.UnknownArgument |> Error
+		_, _, _ ->
+			strformat("argument '{}' unknown", [h_args])
+			|> error.UnknownArgument
+			|> Error
 	}
 }
 

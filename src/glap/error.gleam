@@ -1,7 +1,7 @@
 pub type ParsingError {
-	MissingUnnamedArgument(String)
-	MissingRequiredFlag(String)
-	MissingCommand(String)
-	MissingFlagValue(String)
-	UnknownArgument(String)
+	MissingUnnamedArgument(error: String)
+	MissingRequiredFlag(error: String)
+	MissingCommand(error: String)
+	MissingFlagValue(error: String)
+	UnknownArgument(error: String)
 }
