@@ -15,8 +15,6 @@ import glap/parser.{Parser, parse}
 import glap/cliargs.{then_get_subargument, get_content_opt, get_content_opt_or, get_cliarg, get_command}
 
 pub fn main() {
-	let args = ["-n=me", "add", "task", "name_here", "description_here"]
-
   let parser = [
     // Flag(short, long, description, required, holds_value)
     Flag("-n", "--name", "name of author", True, True),
@@ -57,7 +55,7 @@ pub fn main() {
   ] |> Parser("simple todo list CLI app", _)
 
   // let cliargs = parse(parser, ["your", "cli", arguments", "here"])
-  let assert Ok(cliargs) = parse(parser, args)
+  let assert Ok(cliargs) = parse(parser)
 
   let assert Ok(command) = get_command(cliargs)
 
