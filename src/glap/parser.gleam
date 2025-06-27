@@ -37,19 +37,25 @@ pub fn parser_print(parser: Parser) {
 }
 
 
+fn run_on_parse_error(settings: parser_settings.ParserSettings) {
+	case settings.on_parse_error {
+		Some(f) -> f()
+		None -> Nil
+	}
+}
+
+
 pub fn parse(parser: Parser, args: List(String)) -> Result(cliargs.CLIArgs, ParsingError) {
 	let subcommands = list.filter(parser.arguments, arguments.is_command)
 	let subflags = list.filter(parser.arguments, arguments.is_flag)
 	let subunnamedarguments = list.filter(parser.arguments, arguments.is_unnamed_argument)
 
-	parse_aux(args, subcommands, subflags, subunnamedarguments, parser.settings)
-}
-
-
-fn run_on_parse_error(settings: parser_settings.ParserSettings) {
-	case settings.on_parse_error {
-		Some(f) -> f()
-		None -> Nil
+	case parse_aux(args, subcommands, subflags, subunnamedarguments, parser.settings) {
+		Ok(x) -> Ok(x)
+		Error(e) -> {
+			run_on_parse_error(parser.settings)
+			Error(e)
+		}
 	}
 }
 
@@ -79,15 +85,11 @@ fn parse_aux(
 		|> string.join(" | ")
 
 
-	use <- bool.guard(when: args == [] && required_commands != [] && parser_settings.enforce_required, return: {
-		run_on_parse_error(parser_settings)
-
+	use <- bool.guard(when: args == [] && required_commands != [] && parser_settings.enforce_required, return:
 		Error(error.MissingCommand(utils.strformat("missing required command: {}", [required_commands_str])))
-	})
+	)
 
-	use <- bool.guard(when: args == [] && unnamed_arguments != [] && parser_settings.enforce_required, return: {
-		run_on_parse_error(parser_settings)
-
+	use <- bool.guard(when: args == [] && unnamed_arguments != [] && parser_settings.enforce_required, return:
 		strformat("missing required flags: {}", [
 			list.map(unnamed_arguments, fn(cliarg) {
 				let assert arguments.UnnamedArgument(name, _) = cliarg
@@ -98,7 +100,7 @@ fn parse_aux(
 		])
 		|> error.MissingRequiredFlag
 		|> Error
-	})
+	)
 
 	use <- bool.guard(when: args == [], return: Ok([]))
 
@@ -164,9 +166,7 @@ fn parse_aux(
 
 		// NOTE: unless only commands are left in which case we take this command
 
-		[_h_command, .._rest_command], _, _ if required_flags != [] && parser_settings.enforce_required -> {
-			run_on_parse_error(parser_settings)
-
+		[_h_command, .._rest_command], _, _ if required_flags != [] && parser_settings.enforce_required ->
 			strformat("missing required flags: {}", [
 				list.map(required_flags, fn(cliarg) {
 					let assert arguments.Flag(short, long, _, _, _) = cliarg
@@ -177,12 +177,9 @@ fn parse_aux(
 			])
 			|> error.MissingRequiredFlag
 			|> Error
-		}
 
-		[_h_command, .._rest_command], _, _ if unnamed_arguments != [] && parser_settings.enforce_required -> {
+		[_h_command, .._rest_command], _, _ if unnamed_arguments != [] && parser_settings.enforce_required ->
 			// panic as "missing unnamed arguments"
-			run_on_parse_error(parser_settings)
-
 			strformat("missing required flags: {}", [
 				list.map(unnamed_arguments, fn(cliarg) {
 					let assert arguments.UnnamedArgument(name, _) = cliarg
@@ -193,7 +190,6 @@ fn parse_aux(
 			])
 			|> error.MissingRequiredFlag
 			|> Error
-		}
 
 		[arguments.Command(name, _description, _required, subs), ..rest_command], _, _ -> {
 			// NOTE: if current name not matching, try next command
@@ -213,13 +209,10 @@ fn parse_aux(
 			Ok([command_cliarg])
 		}
 
-		_, _, _ -> {
-			run_on_parse_error(parser_settings)
-
+		_, _, _ ->
 			strformat("argument '{}' unknown", [h_args])
 			|> error.UnknownArgument
 			|> Error
-		}
 	}
 }
 
