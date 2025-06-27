@@ -116,3 +116,14 @@ pub fn then_get_subargument(cliarg_o: Result(CLIArg, Nil), subargument_name: Str
 		Error(_) -> Error(Nil)
 	}
 }
+
+pub fn get_command(cliargs: CLIArgs) -> Result(CLIArg, Nil) {
+	use <- bool.guard(when: cliargs == [], return: Error(Nil))
+
+	let assert [cliargs_h, ..cliargs_rest] = cliargs
+
+	case cliargs_h {
+		Command(_, _, _) -> Ok(cliargs_h)
+		_ -> get_command(cliargs_rest)
+	}
+}
