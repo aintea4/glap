@@ -12,7 +12,7 @@ import gleeunit
 
 import glap/arguments.{Command, Flag, UnnamedArgument}
 import glap/parser.{Parser, parse}
-import glap/cliargs.{then_get_subargument, get_content_opt, get_content_opt_or, get_cliarg}
+import glap/cliargs.{then_get_subargument, get_content_opt, get_content_opt_or, get_cliarg, get_command}
 
 pub fn main() {
 	let args = ["-n=me", "add", "task", "name_here", "description_here"]
@@ -56,17 +56,25 @@ pub fn main() {
     ])
   ] |> Parser("simple todo list CLI app", _)
 
-  let assert Ok(cliargs) = parse(parser, args)
   // let cliargs = parse(parser, ["your", "cli", arguments", "here"])
+  let assert Ok(cliargs) = parse(parser, args)
+
+  let assert Ok(command) = get_command(cliargs)
+
+  // NOTE: pattern match on a given command
+  case command {
+    Command("add", _, _) -> io.println("adding")
+    Command("remove", _, _) -> io.println("removing")
+    Command("list", _, _) -> io.println("listing")
+  }
 
   // NOTE: let's assume `./glap -o=/path/to/file add task name_here description_here` was given
 
+  // NOTE: required flags that hold value are required to have a value so we can assert get here
   let assert Ok(author) = get_cliarg(cliargs, "-n") |> get_content_opt
   let output = get_cliarg(cliargs, "--output") |> get_content_opt_or("/path/to/default")
 
-  // let assert Some(add_cliarg) = get_cliarg(cliargs, "add")
-  // let assert Some(task_cliarg) = get_subargument(add_cliarg, "task")
-
+  // NOTE: unnamed arguments are required to have a value so we can assert get here
   let assert Ok(task_name) = get_cliarg(cliargs, "add")
   |> then_get_subargument("task")
   |> then_get_subargument("name")
@@ -89,7 +97,6 @@ pub fn main() {
   io.print("Task description: ")
   io.println(task_description)
 }
-
 ```
 
 Further documentation can be found at <https://hexdocs.pm/glap>.
@@ -97,6 +104,5 @@ Further documentation can be found at <https://hexdocs.pm/glap>.
 ## Development
 
 ```sh
-gleam run   # Run the project
 gleam test  # Run the tests
 ```
