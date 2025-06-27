@@ -8,94 +8,56 @@ gleam add glap
 ```
 
 ```gleam
-import gleeunit
-
+import glap/parser.{Parser, parse_argv}
 import glap/arguments.{Command, Flag, UnnamedArgument}
-import glap/parser.{Parser, parse}
-import glap/cliargs.{then_get_subargument, get_content_opt, get_content_opt_or, get_cliarg, get_command}
+import glap/cliargs.{get_command, get_subargument}
 import glap/parser_settings.{default_parser_settings}
 
 pub fn main() {
   let parser = [
-    // Flag(short, long, description, required, holds_value)
-    Flag("-n", "--name", "name of author", True, True),
-    Flag("-o", "--output", "redirects output to file", False, True),
+    // NOTE: Flag(short, long, description, required, holds_value)
+    Flag("-h", "--help", "shows help message", False, False),
 
-    // Command(name, description, required, subcommands)
+    // NOTE: Command(name, description, required, subcommands)
     Command("add", "", True, [
-      Flag("-k", "--hidden", "adds as hidden", False, False),
-      Command("task", "adds task", True, [
+      Flag("-k", "--alias", "second name you can reference the task with", False, True),
 
-        // UnnamedArgument(name, description)
-        UnnamedArgument("name", "name of the task to add"),
-        UnnamedArgument("description", "description of the task to add")
-      ]),
-
-      Command("project", "adds project", True, [
-
-        UnnamedArgument("name", "name of the project to add"),
-        UnnamedArgument("description", "description of the project to add")
-      ]),
+      // NOTE: UnnamedArgument(name, description)
+      UnnamedArgument("name", "name of the task to add"),
+      UnnamedArgument("description", "description of the task to add")
     ]),
 
     Command("remove", "", True, [
-      Flag("-q", "--quiet", "does not log the deletion", False, False),
-
-      Command("project", "removes a project", True, [
-        UnnamedArgument("name", "name of the project to remove")
-      ]),
-
-      Command("task", "removes a task", True, [
-        UnnamedArgument("name", "name of the task to remove")
-      ])
+      UnnamedArgument("name", "name of the task to remove")
     ]),
 
     Command("list", "lists tasks", True, [
       Command("all", "lists all tasks, even the hidden ones", False, [])
     ])
-  ] |> Parser("simple todo list CLI app", _, default_parser_settings())
+  ] |> Parser("simple todo list CLI app", _, default_parser_settings)
 
-  // let cliargs = parse(parser, ["your", "cli", arguments", "here"])
-  let assert Ok(cliargs) = parse(parser)
 
-  let assert Ok(command) = get_command(cliargs)
+  case parse_argv(parser) {
+    Ok(cliargs) -> {
+      use <- bool.lazy_guard(when: cliargs.get_cliarg(cliargs, "--help") |> result.is_ok, return: show_help)
 
-  // NOTE: pattern match on a given command
-  case command {
-    Command("add", _, _) -> io.println("adding")
-    Command("remove", _, _) -> io.println("removing")
-    Command("list", _, _) -> io.println("listing")
+      let assert Ok(command) = get_command(cliargs)
+
+      case command {
+        cliargs.Command("add", _, _) -> {
+          let alias_name = get_subargument(command, "-k")
+          |> get_content_opt_or("<default alias here>")
+
+          add_task(command, alias_name)
+        }
+        cliargs.Command("remove", _, _) -> remove_task(command)
+        cliargs.Command("list", _, _) -> list_tasks(command)
+        _ -> panic
+       }
+    }
+
+    Error(e) -> io.println_error(e.error)
   }
-
-  // NOTE: let's assume `./glap -o=/path/to/file add task name_here description_here` was given
-
-  // NOTE: required flags that hold value are required to have a value so we can assert get here
-  let assert Ok(author) = get_cliarg(cliargs, "-n") |> get_content_opt
-  let output = get_cliarg(cliargs, "--output") |> get_content_opt_or("/path/to/default")
-
-  // NOTE: unnamed arguments are required to have a value so we can assert get here
-  let assert Ok(task_name) = get_cliarg(cliargs, "add")
-  |> then_get_subargument("task")
-  |> then_get_subargument("name")
-  |> get_content_opt
-
-  let assert Ok(task_description) = get_cliarg(cliargs, "add")
-  |> then_get_subargument("task")
-  |> then_get_subargument("description")
-  |> get_content_opt
-
-  io.print("Author: ")
-  io.println(author)
-  
-  io.print("Output: ")
-  io.println(output)
-  
-  io.print("Task name: ")
-  io.println(task_name)
-  
-  io.print("Task description: ")
-  io.println(task_description)
-}
 ```
 
 Further documentation can be found at <https://hexdocs.pm/glap>.
