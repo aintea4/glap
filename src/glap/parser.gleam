@@ -69,7 +69,19 @@ fn parse_aux(
 		|> string.join(" | ")
 
 	use <- bool.guard(when: args == [] && required_commands != [], return: Error(error.MissingCommand(utils.strformat("missing required command: {}", [required_commands_str]))))
-	use <- bool.guard(when: args == [] && unnamed_arguments != [], return: Error(error.MissingUnnamedArgument("missing unnamed arguments")))
+	use <- bool.guard(when: args == [] && unnamed_arguments != [], return:
+		strformat("missing required flags: {}", [
+			list.map(unnamed_arguments, fn(cliarg) {
+				let assert arguments.UnnamedArgument(name, _) = cliarg
+
+				name
+			})
+			|> string.join(", ")
+		])
+		|> error.MissingRequiredFlag
+		|> Error
+	)
+
 	use <- bool.guard(when: args == [], return: Ok([]))
 
 	let assert [h_args, ..rest_args] = args
@@ -136,7 +148,7 @@ fn parse_aux(
 		// NOTE: unless only commands are left in which case we take this command
 
 		[_h_command, .._rest_command], _, _ if required_flags != [] ->
-			strformat("missing required flags: ", [
+			strformat("missing required flags: {}", [
 				list.map(required_flags, fn(cliarg) {
 					let assert arguments.Flag(short, long, _, _, _) = cliarg
 
@@ -149,7 +161,7 @@ fn parse_aux(
 
 		[_h_command, .._rest_command], _, _ if unnamed_arguments != [] ->
 			// panic as "missing unnamed arguments"
-			strformat("missing required flags: ", [
+			strformat("missing required flags: {}", [
 				list.map(unnamed_arguments, fn(cliarg) {
 					let assert arguments.UnnamedArgument(name, _) = cliarg
 
