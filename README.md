@@ -41,6 +41,8 @@ pub fn main() {
     Ok(cliargs) -> {
       use <- bool.lazy_guard(when: cliargs.get_cliarg(cliargs, "--help") |> result.is_ok, return: show_help)
 
+      // NOTE: this is ok because `default_parser_settings` forces all required arguments to be parsed
+      // otherwise `parse_argv(parser)` would have returned an `Error`
       let assert Ok(command) = get_command(cliargs)
 
       case command {
