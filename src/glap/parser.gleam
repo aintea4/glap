@@ -122,7 +122,6 @@ fn run_on_parse_error(settings: parser_settings.ParserSettings) {
 	}
 }
 
-
 pub fn parse(parser: Parser, args: List(String)) -> Result(cliargs.CLIArgs, ParsingError) {
 	let settings = option.unwrap(parser.settings, parser_settings.default_parser_settings())
 
@@ -130,12 +129,24 @@ pub fn parse(parser: Parser, args: List(String)) -> Result(cliargs.CLIArgs, Pars
 	let subflags = list.filter(parser.arguments, arguments.is_flag)
 	let subunnamedarguments = list.filter(parser.arguments, arguments.is_unnamed_argument)
 
-	case parse_aux(args, subcommands, subflags, subunnamedarguments, settings) {
-		Ok(x) -> Ok(x)
-		Error(e) -> {
-			// FIXME: change, check design
-			show_help(parser)
+	case parse_aux(args, subcommands, subflags, subunnamedarguments, settings), settings.help_on_missing_argument {
+		Ok(x), _ -> Ok(x)
+		Error(#(e, args)), True -> {
+			let showhelp_settings = option.unwrap(parser.help_settings, default_help_settings())
 
+			let printfun = case showhelp_settings.print_to_stderr {
+				True -> io.print_error
+				False -> io.print
+			}
+
+			let tabdesc_length = help_settings.get_tabdesc_string_length(parser.arguments) + extra_description_space_length
+
+			show_help_aux(args, showhelp_settings, printfun, tabdesc_length, 0)
+
+			run_on_parse_error(settings)
+			Error(e)
+		}
+		Error(#(e, _)), False -> {
 			run_on_parse_error(settings)
 			Error(e)
 		}
@@ -149,7 +160,10 @@ fn parse_aux(
 	flags: List(arguments.Argument),
 	unnamed_arguments: List(arguments.Argument),
 	parser_settings: ParserSettings
-) -> Result(cliargs.CLIArgs, ParsingError) {
+) -> Result(cliargs.CLIArgs, #(ParsingError, List(arguments.Argument))) {
+	// NOTE: order is important
+	let arguments = list.flatten([unnamed_arguments, flags, commands])
+
 	let required_flags = list.filter(flags, fn(flag) {
 		let assert arguments.Flag(_, _, _, required, _) = flag
 		required
@@ -169,7 +183,12 @@ fn parse_aux(
 
 
 	use <- bool.guard(when: args == [] && required_commands != [] && parser_settings.enforce_required, return:
-		Error(error.MissingCommand(utils.strformat("missing required command: {}", [required_commands_str])))
+		Error(
+			#(
+				error.MissingCommand(utils.strformat("missing required command: {}", [required_commands_str])),
+				arguments
+			)
+		)
 	)
 
 	use <- bool.guard(when: args == [] && unnamed_arguments != [] && parser_settings.enforce_required, return:
@@ -182,7 +201,7 @@ fn parse_aux(
 			|> string.join(", ")
 		])
 		|> error.MissingRequiredFlag
-		|> Error
+		|> fn(e) { Error(#(e, arguments)) }
 	)
 
 	use <- bool.guard(when: args == [], return: Ok([]))
@@ -259,7 +278,7 @@ fn parse_aux(
 				|> string.join(", ")
 			])
 			|> error.MissingRequiredFlag
-			|> Error
+			|> fn(e) { Error(#(e, arguments)) }
 
 		[_h_command, .._rest_command], _, _ if unnamed_arguments != [] && parser_settings.enforce_required ->
 			// panic as "missing unnamed arguments"
@@ -272,7 +291,7 @@ fn parse_aux(
 				|> string.join(", ")
 			])
 			|> error.MissingRequiredFlag
-			|> Error
+			|> fn(e) { Error(#(e, arguments)) }
 
 		[arguments.Command(name, _description, _required, subs), ..rest_command], _, _ -> {
 			// NOTE: if current name not matching, try next command
@@ -295,7 +314,7 @@ fn parse_aux(
 		_, _, _ ->
 			strformat("argument '{}' unknown", [h_args])
 			|> error.UnknownArgument
-			|> Error
+			|> fn(e) { Error(#(e, arguments)) }
 	}
 }
 

@@ -45,5 +45,6 @@ pub fn showhelp_test() {
     ])
   ] |> Parser("simple todo list CLI app", None, None)
 
-	parser.show_help(parser)
+	let args = ["-n=me", "add"]
+  parse(parser, args)
 }
