@@ -13,13 +13,21 @@ import glap/cliargs
 import glap/utils.{printformat, strformat}
 import glap/error.{type ParsingError}
 import glap/parser_settings.{type ParserSettings}
+import glap/help_settings.{type HelpSettings,default_help_settings}
+
+const tabdesc_char = " "
 
 pub type Parser {
-	Parser(description: String, arguments: List(arguments.Argument), settings: ParserSettings)
+	Parser(
+		description: String,
+		arguments: List(arguments.Argument),
+		settings: Option(ParserSettings),
+		help_settings: Option(HelpSettings)
+	)
 }
 
 pub fn parser_print(parser: Parser) {
-	let Parser(description, args, _) = parser
+	let Parser(description, args, _, _) = parser
 
 	io.println("Parser { ")
 	io.print("\tdescription: ")
@@ -37,6 +45,75 @@ pub fn parser_print(parser: Parser) {
 }
 
 
+fn show_help_aux(
+	args: List(arguments.Argument),
+	showhelp_settings: HelpSettings,
+	printfun: fn(String) -> Nil,
+	tabdesc_length: Int,
+	indent_level: Int
+) {
+	use <- bool.guard(when: args == [], return: Nil)
+	let assert [args_h, ..args_rest] = args
+
+	let indentstr = string.repeat(showhelp_settings.tabstring, indent_level)
+
+	case args_h {
+		arguments.Flag(_, _, _, _, _) -> {
+			help_settings.format_argument_without_desc(args_h)
+			|> string.append(indentstr, _)
+			|> string.pad_end(to: tabdesc_length, with: tabdesc_char)
+			|> string.append(arguments.get_description(args_h) <> "\n")
+			|> printfun
+		}
+		arguments.UnnamedArgument(_, _) -> {
+			help_settings.format_argument_without_desc(args_h)
+			|> string.append(indentstr, _)
+			|> string.pad_end(to: tabdesc_length, with: tabdesc_char)
+			|> string.append(arguments.get_description(args_h) <> "\n")
+			|> printfun
+		}
+		arguments.Command(_, _, _, subcommands) -> {
+			case indent_level < showhelp_settings.recursive_max_depth {
+				True -> printfun("\n")
+				False -> Nil
+			}
+
+			help_settings.format_argument_without_desc(args_h)
+			|> string.append(indentstr, _)
+			|> string.pad_end(to: tabdesc_length, with: tabdesc_char)
+			|> string.append(arguments.get_description(args_h) <> "\n")
+			|> printfun
+
+			case showhelp_settings.recursive_showhelp {
+				True if indent_level < showhelp_settings.recursive_max_depth -> {
+					show_help_aux(subcommands, showhelp_settings, printfun, tabdesc_length, indent_level+1)
+				}
+				_ -> Nil
+			}
+
+		}
+	}
+
+	show_help_aux(args_rest, showhelp_settings, printfun, tabdesc_length, indent_level)
+}
+
+pub fn show_help(parser: Parser) {
+	let settings = option.unwrap(parser.help_settings, default_help_settings())
+
+	let printfun = case settings.print_to_stderr {
+		True -> io.print_error
+		False -> io.print
+	}
+
+	let tabdesc_length = help_settings.get_tabdesc_string_length(parser.arguments) + 1
+
+	strformat("Usage: {} [OPTS...]\n{}\n\n", [argv.load().program, parser.description])
+	|> printfun
+
+	show_help_aux(parser.arguments, settings, printfun, tabdesc_length, 0)
+}
+
+
 fn run_on_parse_error(settings: parser_settings.ParserSettings) {
 	case settings.on_parse_error {
 		Some(f) -> f()
@@ -46,14 +123,20 @@ fn run_on_parse_error(settings: parser_settings.ParserSettings) {
 
 
 pub fn parse(parser: Parser, args: List(String)) -> Result(cliargs.CLIArgs, ParsingError) {
+	let settings = option.unwrap(parser.settings, parser_settings.default_parser_settings())
+	let showhelp_settings = option.unwrap(parser.help_settings, help_settings.default_help_settings())
+
 	let subcommands = list.filter(parser.arguments, arguments.is_command)
 	let subflags = list.filter(parser.arguments, arguments.is_flag)
 	let subunnamedarguments = list.filter(parser.arguments, arguments.is_unnamed_argument)
 
-	case parse_aux(args, subcommands, subflags, subunnamedarguments, parser.settings) {
+	case parse_aux(args, subcommands, subflags, subunnamedarguments, settings) {
 		Ok(x) -> Ok(x)
 		Error(e) -> {
-			run_on_parse_error(parser.settings)
+			// FIXME: change, check design
+			show_help(parser)
+
+			run_on_parse_error(settings)
 			Error(e)
 		}
 	}

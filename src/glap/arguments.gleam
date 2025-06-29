@@ -7,6 +7,15 @@ pub type Argument {
 	Command(name: String, description: String, required: Bool, subcommands: List(Argument))
 }
 
+@internal
+pub fn get_description(argument: Argument) -> String {
+	case argument {
+		UnnamedArgument(_, d) -> d
+		Flag(_, _, d, _, _) -> d
+		Command(_, d, _, _) -> d
+	}
+}
+
 pub fn argument_to_string(argument: Argument) -> String {
 	case argument {
 		UnnamedArgument(name, description) -> strformat("UnnamedArgument(\"{}\", \"{}\")", [name, description])
