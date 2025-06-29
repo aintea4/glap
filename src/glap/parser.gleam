@@ -16,6 +16,7 @@ import glap/parser_settings.{type ParserSettings}
 import glap/help_settings.{type HelpSettings,default_help_settings}
 
 const tabdesc_char = " "
+const extra_description_space_length = 4
 
 pub type Parser {
 	Parser(
@@ -105,7 +106,7 @@ pub fn show_help(parser: Parser) {
 		False -> io.print
 	}
 
-	let tabdesc_length = help_settings.get_tabdesc_string_length(parser.arguments) + 1
+	let tabdesc_length = help_settings.get_tabdesc_string_length(parser.arguments) + extra_description_space_length
 
 	strformat("Usage: {} [OPTS...]\n{}\n\n", [argv.load().program, parser.description])
 	|> printfun
