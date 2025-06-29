@@ -20,15 +20,15 @@ const extra_description_space_length = 4
 
 pub type Parser {
 	Parser(
-		description: String,
 		arguments: List(arguments.Argument),
+		description: String,
 		settings: Option(ParserSettings),
 		help_settings: Option(HelpSettings)
 	)
 }
 
 pub fn parser_print(parser: Parser) {
-	let Parser(description, args, _, _) = parser
+	let Parser(args, description, _, _) = parser
 
 	io.println("Parser { ")
 	io.print("\tdescription: ")
@@ -125,7 +125,6 @@ fn run_on_parse_error(settings: parser_settings.ParserSettings) {
 
 pub fn parse(parser: Parser, args: List(String)) -> Result(cliargs.CLIArgs, ParsingError) {
 	let settings = option.unwrap(parser.settings, parser_settings.default_parser_settings())
-	let showhelp_settings = option.unwrap(parser.help_settings, help_settings.default_help_settings())
 
 	let subcommands = list.filter(parser.arguments, arguments.is_command)
 	let subflags = list.filter(parser.arguments, arguments.is_flag)

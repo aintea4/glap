@@ -34,7 +34,11 @@ pub fn main() {
     Command("list", "lists tasks", True, [
       Command("all", "lists all tasks, even the hidden ones", False, [])
     ])
-  ] |> Parser("simple todo list CLI app", _, default_parser_settings)
+  ] |> Parser(
+		"simple todo list CLI app",
+		Some(parser_settings.default_parser_settings()),
+		Some(help_settings.default_help_settings())
+	)
 
 
   case parse_argv(parser) {

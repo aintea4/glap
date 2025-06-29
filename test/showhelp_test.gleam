@@ -44,7 +44,7 @@ pub fn showhelp_test() {
       Command("all", "lists all tasks, even the hidden ones", False, [])
     ])
   // ] |> Parser("simple todo list CLI app", _, ParserSettings(True))
-  ] |> Parser("simple todo list CLI app", _, None, None)
+  ] |> Parser("simple todo list CLI app", None, None)
 
 	let args = ["-n=me", "add", "task", "name_here", "description_here"]
 
